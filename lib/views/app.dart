@@ -1,4 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:myphotosblocapp/bloc/app_bloc.dart';
+import 'package:myphotosblocapp/bloc/app_event.dart';
+import 'package:myphotosblocapp/bloc/app_state.dart';
+import 'package:myphotosblocapp/dialogs/show_auth_error.dart';
+import 'package:myphotosblocapp/loading/loading_screen.dart';
+import 'package:myphotosblocapp/views/login_view.dart';
+import 'package:myphotosblocapp/views/photo_gallery_view.dart';
+import 'package:myphotosblocapp/views/register_view.dart';
 
 class App extends StatelessWidget {
   const App({
@@ -7,12 +16,50 @@ class App extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
+    return BlocProvider<AppBloc>(
+      create: (_) => AppBloc()
+        ..add(
+          const AppEventInitialize(),
+        ),
+      child: MaterialApp(
+        title: 'Photo Library',
+        theme: ThemeData(
+          primarySwatch: Colors.blue,
+        ),
+        debugShowCheckedModeBanner: false,
+        home: BlocConsumer<AppBloc, AppState>(
+          listener: (context, appState) {
+            if (appState.isLoading) {
+              LoadingScreen.instance().show(
+                context: context,
+                text: 'Loading...',
+              );
+            } else {
+              LoadingScreen.instance().hide();
+            }
+
+            final authError = appState.authError;
+            if (authError != null) {
+              showAuthError(
+                authError: authError,
+                context: context,
+              );
+            }
+          },
+          builder: (context, appState) {
+            if (appState is AppStateLoggedOut) {
+              return const LoginView();
+            } else if (appState is AppStateLoggedIn) {
+              return const PhotoGalleryView();
+            } else if (appState is AppStateIsInRegistrationView) {
+              return const RegisterView();
+            } else {
+              //this should never happen
+              return Container();
+            }
+          },
+        ),
       ),
-      debugShowCheckedModeBanner: false,
     );
   }
 }
